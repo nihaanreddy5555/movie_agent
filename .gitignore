@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+
+.DS_Store
+.env
+*/.ipynb_checkpoints/
+*.pt
+*.pth
+*.pkl
+*.h5
+*.onnx
+*.safetensors
