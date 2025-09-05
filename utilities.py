@@ -59,3 +59,101 @@ def build_user_vector(alpha=1.0, beta=0.6) -> np.ndarray:
     v = alpha * pos - beta * neg
     n = np.linalg.norm(v)
     return (v / n) if n else v
+
+def get_filters() -> Dict[str, Any]:
+    return FILTERS or {}
+
+def set_filters(**kwargs) -> None:
+    # Accept keys: year_min, year_max, runtime_min, runtime_max, language, genres (list[str])
+    for k, v in kwargs.items():
+        if v is None: continue
+        FILTERS[k] = v
+    save_json(CACHE_FILTERS, FILTERS)
+
+def clear_filters() -> None:
+    FILTERS.clear()
+    save_json(CACHE_FILTERS, FILTERS)
+
+def _match_filters(m: Dict[str, Any], f: Dict[str, Any]) -> bool:
+    # Year range
+    y = None
+    try:
+        y = int(m.get("year") or 0)
+    except Exception:
+        y = None
+    ymin = f.get("year_min"); ymax = f.get("year_max")
+    if ymin is not None and y is not None and y < int(ymin):
+        return False
+    if ymax is not None and y is not None and y > int(ymax):
+        return False
+
+
+    # Runtime range
+    r = m.get("runtime")
+    rmin = f.get("runtime_min"); rmax = f.get("runtime_max")
+    if rmin is not None and isinstance(r, (int, float)) and r < int(rmin):
+        return False
+    if rmax is not None and isinstance(r, (int, float)) and r > int(rmax):
+        return False
+
+
+    # Language exact code match (e.g., 'en', 'hi', 'te')
+    lang = normalize_lang_code(f.get("language"))
+    if lang:
+        movie_lang = (m.get("original_language") or "").lower()
+        if movie_lang != lang:
+            return False
+
+
+
+    # Genre intersection (user-provided genres ⊆ movie genres?)
+    want = set([g.lower() for g in (f.get("genres") or [])])
+    if want:
+        have = set([g.lower() for g in (m.get("genres") or [])])
+        if not want.intersection(have):
+            return False
+
+
+    return True
+
+def filter_pool(pool: List[str]) -> List[str]:
+    f = get_filters()
+    if not f: return pool
+    out = []
+    for mid in pool:
+        m = MOVIES.get(mid)
+        if not m: continue
+        if _match_filters(m, f):
+            out.append(mid)
+    return out
+
+def keyword_search(query: str, limit: int = 30) -> List[str]:
+    """Case-insensitive substring search over title, overview, and cast."""
+    q = (query or "").strip().lower()
+    if not q: return []
+    hits = []
+    for mid, m in MOVIES.items():
+        title = (m.get("title") or "").lower()
+        ov = (m.get("overview") or "").lower()
+        cast = " ".join(m.get("cast") or []).lower()
+        hay = " ".join([title, ov, cast])
+        if q in hay:
+            hits.append(mid)
+    # Respect active filters if any
+    hits = filter_pool(hits)
+    # Order: simple popularity desc (then title)
+    hits.sort(key=lambda x: (MOVIES[x].get("popularity", 0.0), MOVIES[x].get("title", "")), reverse=True)
+    return hits[:limit]
+
+# --- Language normalization ---
+LANGUAGE_ALIASES = {
+    "en": "en", "english": "en",
+    "hi": "hi", "hindi": "hi",
+    "te": "te", "telugu": "te", "తెలుగు": "te",
+}
+
+def normalize_lang_code(s: str | None) -> str | None:
+    code = (s or "").strip().lower()
+    if not code:
+        return None
+    return LANGUAGE_ALIASES.get(code, code if len(code) == 2 else None)

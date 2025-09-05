@@ -45,8 +45,12 @@ def main():
         elif name == "/dislike" and args: cmd_dislike(args[0])
         elif name == "/skip" and args: cmd_skip(args[0])
         elif name == "/why" and args: cmd_why(args[0])
-        elif name == "/add-filters":
-            rprint("[cyan]Filters are off for now. This is where we’ll add runtime/year/language later.[/cyan]")
+        elif name == "/add-filters": cmd_add_filters()
+        elif name == "/clear-filters": cmd_clear_filters()
+        elif name == "/search": cmd_search(args)
+        elif name == "/languages": cmd_languages()
+        elif name == "/list-lang": cmd_list_lang(args)
+        elif name == "/seed-lang" and args: cmd_seed_lang(args)
         elif name == "/quit": break
         else:
             rprint("[yellow]Unknown command.[/yellow] Try /help.")

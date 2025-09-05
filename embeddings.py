@@ -23,7 +23,7 @@ def _movie_text(mid: str) -> str:
 def _build_corpus(order: List[str]) -> list[str]:
     return [_movie_text(mid) for mid in order]
 
-def rebuild_embeddings() -> None:
+def rebuild_embeddings(quiet: bool = False) -> None:
     """Rebuild TF-IDF embeddings from current MOVIES and write caches."""
     global EMBEDS, INDEX
 
@@ -39,6 +39,8 @@ def rebuild_embeddings() -> None:
         except Exception:
             pass
         np.save(CACHE_EMBEDS, EMBEDS)
+        if not quiet:
+            rprint("[green]Rebuilt embeddings:[/green] items=0 dims=0")
         return
 
     # Stable order for reproducibility
@@ -64,7 +66,10 @@ def rebuild_embeddings() -> None:
     save_json(CACHE_INDEX, INDEX)
     with open(TFIDF_PATH, "wb") as f:
         pickle.dump(vectorizer, f)
-    rprint(f"[green]Rebuilt embeddings:[/green] items={len(order)} dims={EMBEDS.shape[1]}")
+
+    if not quiet:
+        rprint(f"[green]Rebuilt embeddings:[/green] items={len(order)} dims={EMBEDS.shape[1]}")
+
 
 def ensure_embed_arrays() -> None:
     """Load or rebuild the global EMBEDS/INDEX if needed; always leave EMBEDS as an ndarray."""

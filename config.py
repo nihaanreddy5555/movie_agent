@@ -9,6 +9,7 @@ from rich import print as rprint
 from rich.table import Table
 
 DATA_DIR = pathlib.Path("./data"); DATA_DIR.mkdir(exist_ok=True)
+CACHE_FILTERS = DATA_DIR / "filters.json"  # saved search filters
 CACHE_MOVIES = DATA_DIR / "movies.json"     # TMDB details cache
 CACHE_EVENTS = DATA_DIR / "events.json"     # likes/dislikes/views
 CACHE_EMBEDS = DATA_DIR / "embeddings.npy"  # movie vectors

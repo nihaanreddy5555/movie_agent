@@ -19,6 +19,7 @@ def load_json(p: pathlib.Path, default):
 def save_json(p: pathlib.Path, obj):
     p.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
 
+FILTERS: Dict[str, Any] = load_json(CACHE_FILTERS, {})  # arbitrary saved filters
 MOVIES: Dict[str, Any] = load_json(CACHE_MOVIES, {})       # movie_id -> dict
 EVENTS: List[Dict[str, Any]] = load_json(CACHE_EVENTS, [])  # list of {movie_id, ts, action}
 EMBEDS = None   # numpy array

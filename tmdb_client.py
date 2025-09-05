@@ -21,3 +21,11 @@ def tmdb_trending(page=1):
 
 def tmdb_movie(mid: int):
     return tmdb(f"movie/{mid}", append_to_response="credits,keywords,release_dates")
+
+def tmdb_discover(page=1, **params):
+    # Default sort by popularity; pass through any discover params
+    return tmdb("discover/movie", page=page, sort_by="popularity.desc", **params)["results"]
+
+def tmdb_discover_by_language(lang_code: str, page=1):
+    return tmdb_discover(page=page, with_original_language=lang_code)
+

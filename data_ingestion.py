@@ -17,6 +17,8 @@ def cache_movie(mid: int):
     if key in MOVIES: return
     d = tmdb_movie(mid)
     item = {
+        "runtime": d.get("runtime"),
+        "original_language": d.get("original_language"),
         "id": str(d["id"]),
         "title": d.get("title") or d.get("original_title"),
         "year": (d.get("release_date") or "????")[:4],
@@ -29,17 +31,40 @@ def cache_movie(mid: int):
     }
     MOVIES[key] = item
     save_json(CACHE_MOVIES, MOVIES)
-    emb.add_embedding(key, item["overview"] or item["title"] or "")
-    # embed overview
-    emb.add_embedding(key, item["overview"] or item["title"] or "")
+    # Embeddings will be rebuilt once after seeding.
+
 
 def fetch_seed_pool(pages=2, size_cap=60) -> List[str]:
     ids = []
-    for p in range(1, pages+1):
+    for p in range(1, pages + 1):
         for r in tmdb_trending(page=p):
             ids.append(str(r["id"]))
     ids = list(dict.fromkeys(ids))  # dedupe
     random.shuffle(ids)
     ids = ids[:size_cap]
-    for mid in ids: cache_movie(int(mid))
+
+    for mid in ids:
+        cache_movie(int(mid))
+
+    rprint(f"[dim]Cached {len(ids)} movies. Building embeddings…[/dim]")
+    emb.rebuild_embeddings(quiet=True)
+    rprint("[dim]Done.[/dim]")
+
+    # Build embeddings once, quietly, after caching all movies
+    emb.rebuild_embeddings(quiet=True)
+    return ids
+
+def fetch_seed_pool_by_language(lang_code: str, pages=2, size_cap=60) -> List[str]:
+    """Fetch a seed pool using TMDB discover filtered by original language."""
+    ids = []
+    for p in range(1, pages + 1):
+        for r in tmdb_discover_by_language(lang_code, page=p):
+            ids.append(str(r["id"]))
+    ids = list(dict.fromkeys(ids))  # dedupe
+    random.shuffle(ids)
+    ids = ids[:size_cap]
+    for mid in ids:
+        cache_movie(int(mid))
+    # Build embeddings once after caching all movies
+    emb.rebuild_embeddings(quiet=True)
     return ids

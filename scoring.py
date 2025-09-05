@@ -26,6 +26,7 @@ def recommend(k=10) -> List[str]:
     pool = list(MOVIES.keys())
     seen = {e["movie_id"] for e in EVENTS}
     pool = [mid for mid in pool if mid not in seen]
+    pool = filter_pool(pool)
     if not pool:
         pool = fetch_seed_pool(pages=2, size_cap=80)
     user_vec = build_user_vector()

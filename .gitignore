@@ -1,10 +1,56 @@
-.venv/
+# --- Python basics ---
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
+# Virtual envs
+.venv/
+env/
+venv/
+
+# OS junk
 .DS_Store
-.env
+Thumbs.db
+
+# Notebooks
 */.ipynb_checkpoints/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Build & packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+
+# Caches / tools
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# IDEs
+.vscode/
+.idea/
+
+# --- Project-specific caches & artifacts ---
+# Your app writes JSON caches and arrays that shouldn’t be versioned:
+# - MOVIES/EVENTS/INDEX (JSON) and EMBEDS (NPY) live under DATA_DIR
+# - TF-IDF vectorizer pickled file (tfidf.pkl)
+# Adjust the path if your DATA_DIR isn’t "data/"
+data/
+**/tfidf.pkl
+**/*.npy
+# If you want to be more surgical instead of ignoring all of data/, use:
+# data/*.json
+# data/**/*.json
+# data/**/*.npy
+
+# Large ML/weights (if ever added)
 *.pt
 *.pth
 *.pkl

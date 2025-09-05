@@ -22,6 +22,11 @@ def show_list(mids: List[str], title="Recommendations"):
     tbl.add_column("Genres")
     tbl.add_column("Why / Signal")
 
+    f = get_filters()
+    if f and title == "Recommendations":
+        title = f"Recommendations (filtered)"
+    tbl = Table(title=title)
+
     user_vec = build_user_vector()
     has_profile = np.linalg.norm(user_vec) > 1e-6
 
