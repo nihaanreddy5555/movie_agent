@@ -39,7 +39,7 @@ def main():
         name, args = parts[0].lower(), parts[1:]
 
         if name == "/help": print(HELP)
-        elif name == "/seed": cmd_seed()
+        elif name == "/seed": cmd_seed(args)
         elif name == "/recommend": cmd_recommend(args)
         elif name == "/like" and args: cmd_like(args[0])
         elif name == "/dislike" and args: cmd_dislike(args[0])

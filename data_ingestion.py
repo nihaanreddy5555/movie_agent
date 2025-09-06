@@ -54,17 +54,38 @@ def fetch_seed_pool(pages=2, size_cap=60) -> List[str]:
     emb.rebuild_embeddings(quiet=True)
     return ids
 
-def fetch_seed_pool_by_language(lang_code: str, pages=2, size_cap=60) -> List[str]:
-    """Fetch a seed pool using TMDB discover filtered by original language."""
-    ids = []
+def fetch_seed_pool_by_language(lang_code: str, pages: int = 2, size_cap: int = 60, **discover_params) -> List[str]:
+    """
+    Fetch a seed pool using TMDB discover filtered by original language,
+    with extra discover params forwarded to the TMDB API.
+    
+    Args:
+        lang_code: TMDB two-letter language code (e.g., "hi" for Hindi).
+        pages: number of discover pages to fetch.
+        size_cap: maximum number of unique movie IDs to return.
+        **discover_params: extra TMDB discover parameters (sort_by, primary_release_date.lte/gte, etc.).
+
+    Returns:
+        A list of movie IDs (as strings), shuffled and capped by size_cap.
+    """
+    ids: List[str] = []
     for p in range(1, pages + 1):
-        for r in tmdb_discover_by_language(lang_code, page=p):
+        results = tmdb_discover_by_language(lang_code, page=p, **discover_params)
+        for r in results:
             ids.append(str(r["id"]))
-    ids = list(dict.fromkeys(ids))  # dedupe
+
+    # Deduplicate while preserving order
+    ids = list(dict.fromkeys(ids))
+
+    # Shuffle for some randomness
     random.shuffle(ids)
+
+    # Limit the pool size
     ids = ids[:size_cap]
+
+    # Cache metadata locally and rebuild embeddings once
     for mid in ids:
         cache_movie(int(mid))
-    # Build embeddings once after caching all movies
     emb.rebuild_embeddings(quiet=True)
+
     return ids
