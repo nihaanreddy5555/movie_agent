@@ -51,6 +51,7 @@ def main():
         elif name == "/languages": cmd_languages()
         elif name == "/list-lang": cmd_list_lang(args)
         elif name == "/seed-lang" and args: cmd_seed_lang(args)
+        elif name == "/stats": cmd_stats()
         elif name == "/quit": break
         else:
             rprint("[yellow]Unknown command.[/yellow] Try /help.")

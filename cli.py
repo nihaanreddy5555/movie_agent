@@ -32,6 +32,7 @@ Commands:
 /languages               → list language codes currently in cache
 /list-lang <code>        → show movies whose original_language matches <code>
 /seed-lang <code|name> [asc|desc] [--no-filters]
+/stats                  → show how many movies you’ve rated (likes, dislikes, skips)
 /help                    → show commands
 /quit                    → exit
 """
@@ -107,10 +108,6 @@ def cmd_why(mid: str):
     rprint(f"[dim]Reason: content similarity vector; score={sc:.3f}[/dim]")
 
 
-# -----------------------------
-# Helpers (no duplicates below)
-# -----------------------------
-
 def _parse_range(s: str) -> Tuple[int | None, int | None]:
     """Parse 'A-B' or single 'A' as minutes/years. Returns (min, max) possibly None."""
     s = (s or "").strip()
@@ -150,9 +147,6 @@ def _parse_year_interval_to_bounds(tok: str) -> Tuple[int | None, int | None]:
         return y, y
     return None, None
 
-# -----------------------------
-# Filters
-# -----------------------------
 
 def cmd_add_filters():
     rprint("[cyan]Add filters — leave blank to remove that constraint.[/cyan]")
@@ -208,10 +202,6 @@ def cmd_clear_filters():
     clear_filters(); rprint("[green]Filters cleared.[/green]")
 
 
-# -----------------------------
-# Search & Language Lists
-# -----------------------------
-
 def cmd_search(args: List[str]):
     if not args:
         rprint("[yellow]Usage: /search <query>[/yellow]"); return
@@ -254,9 +244,23 @@ def cmd_list_lang(args: List[str]):
     show_list(ids, title=f"Language: {code}")
 
 
-# -----------------------------
-# Seeding by language (interval-aware)
-# -----------------------------
+def cmd_stats():
+    if not EVENTS:
+        rprint("[yellow]No events recorded yet. Try /seed and rate some movies first.[/yellow]")
+        return
+
+    counts = Counter(e["action"] for e in EVENTS)
+    total = sum(counts.values())
+    likes = counts.get("like", 0)
+    dislikes = counts.get("dislike", 0)
+    skips = counts.get("skip", 0)
+
+    rprint("[bold cyan]Your rating stats:[/bold cyan]")
+    rprint(f" Total rated: {total}")
+    rprint(f"  👍 Likes:    {likes}")
+    rprint(f"  👎 Dislikes: {dislikes}")
+    rprint(f"  ⏭️ Skips:    {skips}")
+
 
 def cmd_seed_lang(args: List[str]):
     """
@@ -264,11 +268,9 @@ def cmd_seed_lang(args: List[str]):
       /seed-lang <code|name> [asc|desc] [--no-filters]
 
     Notes:
-      • Year interval is NOT accepted here. It is taken from /add-filters (year_min/year_max).
-      • If year_min/year_max exist, they are mapped to TMDB discover bounds automatically.
-      • Sort: 'asc' → release_date.asc, 'desc' → release_date.desc;
-              if year bounds exist and no sort given, default to release_date.asc.
-              otherwise TMDB default (popularity.desc) is used.
+      • Year interval comes from /add-filters (year_min/year_max).
+      • If you already rated 100+ movies in a language, this will try to auto-pick
+        another under-rated language for variety.
     """
     if not args:
         rprint("[yellow]Usage: /seed-lang <code|name> [asc|desc] [--no-filters][/yellow]")
@@ -290,6 +292,31 @@ def cmd_seed_lang(args: List[str]):
         rprint("[yellow]Unknown language. Try a two-letter code like 'hi' or a name like 'hindi'.[/yellow]")
         return
 
+    # --- Smarter seeding: check how many ratings per language ---
+    lang_counts = Counter()
+    for ev in EVENTS:
+        mid = ev["movie_id"]
+        m = MOVIES.get(mid)
+        if not m:
+            continue
+        lang = (m.get("original_language") or "").lower().strip()
+        if lang:
+            lang_counts[lang] += 1
+
+    if lang_counts.get(code, 0) >= 100:
+        # Pick an alternative language with fewer ratings
+        alt_lang = None
+        if lang_counts:
+            # Sort by fewest ratings first
+            alt_lang = min(lang_counts.items(), key=lambda x: x[1])[0]
+        if alt_lang and alt_lang != code:
+            rprint(f"[yellow]You’ve already rated {lang_counts[code]} movies in '{code}'. "
+                   f"Switching to under-rated language '{alt_lang}' for variety.[/yellow]")
+            code = alt_lang
+        else:
+            rprint(f"[yellow]You’ve already rated {lang_counts[code]} movies in '{code}'. "
+                   f"Consider trying another language for variety.[/yellow]")
+
     # Build TMDB discover params from saved /add-filters years
     discover_params = {}
     f = get_filters()
@@ -307,13 +334,10 @@ def cmd_seed_lang(args: List[str]):
     elif sort_tok == "desc":
         discover_params["sort_by"] = "release_date.desc"
     else:
-        # If year bounds exist but no explicit sort, pick chronological asc
         if ("primary_release_date.gte" in discover_params) or ("primary_release_date.lte" in discover_params):
             discover_params["sort_by"] = "release_date.asc"
-        # else: leave TMDB default (popularity.desc)
 
-    rprint("[cyan]Fetching a seed pool…[/cyan]")
-    # Use your widened sampling if desired (e.g., pages=10, size_cap=200)
+    rprint(f"[cyan]Fetching a seed pool for language: {code}…[/cyan]")
     ids = fetch_seed_pool_by_language(code, pages=10, size_cap=200, **discover_params)
 
     # Optionally apply local filters (year/runtime/genres/language) on the seed
